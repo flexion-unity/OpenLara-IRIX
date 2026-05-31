@@ -826,6 +826,7 @@ struct Level : IGame {
             return NULL;
 
         if (!level.soundsInfo) return NULL;
+        if (id < 0 || id >= level.soundsCount) return NULL;
 
         int16 a = level.soundsMap[id];
         if (a == -1) return NULL;

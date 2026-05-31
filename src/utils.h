@@ -10,7 +10,7 @@
 #ifdef _DEBUG
     #if defined(_OS_WP8)
         #define debugBreak() /* TODO */
-    #elif defined(_OS_LINUX) || defined(_OS_RPI) || defined(_OS_CLOVER)
+    #elif defined(_OS_LINUX) || defined(_OS_RPI) || defined(_OS_CLOVER) || defined(_OS_IRIX)
         #define debugBreak() raise(SIGTRAP);
     #elif defined(_OS_3DS)
         #define debugBreak() svcBreak(USERBREAK_ASSERT);
@@ -45,7 +45,7 @@
     #define ASSERTV(expr) (expr) ? 1 : 0
 
     #ifdef PROFILE
-        #ifdef _OS_LINUX
+        #if defined(_OS_LINUX) || defined(_OS_IRIX)
             #define LOG(...) printf(__VA_ARGS__); fflush(stdout)
         #else
             #define LOG(...) printf(__VA_ARGS__)
@@ -166,6 +166,25 @@ inline uint16 swap16(uint16 x) {
 inline uint32 swap32(uint32 x) {
     return ((x & 0x000000FF) << 24) | ((x & 0x0000FF00) << 8) | ((x & 0x00FF0000) >> 8) | ((x & 0xFF000000) >> 24);
 }
+
+// Endianness helpers — level file data is always little-endian (PC TR format).
+// On big-endian hosts every multi-byte field loaded via stream.read() needs a swap.
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    #define PLATFORM_BIG_ENDIAN 1
+    inline void leSwapInPlace(uint16 &x) { x = swap16(x); }
+    inline void leSwapInPlace(int16  &x) { x = (int16)swap16((uint16)x); }
+    inline void leSwapInPlace(uint32 &x) { x = swap32(x); }
+    inline void leSwapInPlace(int32  &x) { x = (int32)swap32((uint32)x); }
+    inline uint16 leToNative(uint16 x)   { return swap16(x); }
+    inline uint32 leToNative(uint32 x)   { return swap32(x); }
+#else
+    inline void leSwapInPlace(uint16 &) {}
+    inline void leSwapInPlace(int16  &) {}
+    inline void leSwapInPlace(uint32 &) {}
+    inline void leSwapInPlace(int32  &) {}
+    inline uint16 leToNative(uint16 x)  { return x; }
+    inline uint32 leToNative(uint32 x)  { return x; }
+#endif
 
 float clampAngle(float a) {
     return a < -PI ? a + PI2 : (a >= PI ? a - PI2 : a);
@@ -1491,7 +1510,11 @@ struct Color24 { // RGB888
 };
 
 union Color16 { // RGBA5551
+#ifdef PLATFORM_BIG_ENDIAN
+    struct { uint16 a:1, r:5, g:5, b:5; };
+#else
     struct { uint16 b:5, g:5, r:5, a:1; };
+#endif
     uint16 value;
 
     Color16() {}
@@ -1502,7 +1525,11 @@ union Color16 { // RGBA5551
 };
 
 union ColorCLUT { // RGBA5551
+#ifdef PLATFORM_BIG_ENDIAN
+    struct { uint16 a:1, b:5, g:5, r:5; };
+#else
     struct { uint16 r:5, g:5, b:5, a:1; };
+#endif
     uint16 value;
 
     ColorCLUT() {}
@@ -1530,7 +1557,13 @@ struct Tile16 {
 
 #ifdef USE_ATLAS_RGBA16
 union AtlasColor {
+    // AtlasColor is generated in-engine (not read from file), so only the
+    // bitfield layout matters — reversed on BE so bit-extraction is consistent.
+#ifdef PLATFORM_BIG_ENDIAN
+    struct { uint16 r:5, g:5, b:5, a:1; };
+#else
     struct { uint16 a:1, b:5, g:5, r:5; };
+#endif
     uint16 value;
 
     AtlasColor() {}
@@ -2288,22 +2321,42 @@ public:
 
     inline uint16 readLE16() {
         uint16 x;
-        return read(x);
+        raw(&x, 2);
+#ifdef PLATFORM_BIG_ENDIAN
+        return swap16(x);
+#else
+        return x;
+#endif
     }
 
     inline uint32 readLE32() {
         uint32 x;
-        return read(x);
+        raw(&x, 4);
+#ifdef PLATFORM_BIG_ENDIAN
+        return swap32(x);
+#else
+        return x;
+#endif
     }
 
     inline uint16 readBE16() {
         uint16 x;
-        return swap16(read(x));
+        raw(&x, 2);
+#ifdef PLATFORM_BIG_ENDIAN
+        return x;
+#else
+        return swap16(x);
+#endif
     }
 
     inline uint32 readBE32() {
         uint32 x;
-        return swap32(read(x));
+        raw(&x, 4);
+#ifdef PLATFORM_BIG_ENDIAN
+        return x;
+#else
+        return swap32(x);
+#endif
     }
 
     inline uint64 read64() {
@@ -2314,6 +2367,44 @@ public:
 
 Stream::Pack* Stream::packs[MAX_PACKS];
 Array<char*> Stream::fileList;
+
+#ifdef PLATFORM_BIG_ENDIAN
+template<> inline short2& Stream::read<short2>(short2& x) {
+    raw(&x,4);
+    x.x=(int16)swap16((uint16)x.x); x.y=(int16)swap16((uint16)x.y);
+    return x; }
+template<> inline short3& Stream::read<short3>(short3& x) {
+    raw(&x,6);
+    x.x=(int16)swap16((uint16)x.x); x.y=(int16)swap16((uint16)x.y); x.z=(int16)swap16((uint16)x.z);
+    return x; }
+template<> inline short4& Stream::read<short4>(short4& x) {
+    raw(&x,8);
+    x.x=(int16)swap16((uint16)x.x); x.y=(int16)swap16((uint16)x.y);
+    x.z=(int16)swap16((uint16)x.z); x.w=(int16)swap16((uint16)x.w);
+    return x; }
+
+template<> inline uint16& Stream::read<uint16>(uint16 &x) { raw(&x,2); x=swap16(x); return x; }
+template<> inline  int16& Stream::read< int16>( int16 &x) { raw(&x,2); x=(int16)swap16((uint16)x); return x; }
+template<> inline uint32& Stream::read<uint32>(uint32 &x) { raw(&x,4); x=swap32(x); return x; }
+template<> inline  int32& Stream::read< int32>( int32 &x) { raw(&x,4); x=(int32)swap32((uint32)x); return x; }
+
+template<> inline uint16* Stream::read<uint16>(uint16*& a, int count) {
+    if (count) { a = new uint16[count]; raw(a, count*2);
+        for (int i=0;i<count;i++) a[i]=swap16(a[i]); }
+    else a=NULL; return a; }
+template<> inline int16* Stream::read<int16>(int16*& a, int count) {
+    if (count) { a = new int16[count]; raw(a, count*2);
+        for (int i=0;i<count;i++) a[i]=(int16)swap16((uint16)a[i]); }
+    else a=NULL; return a; }
+template<> inline uint32* Stream::read<uint32>(uint32*& a, int count) {
+    if (count) { a = new uint32[count]; raw(a, count*4);
+        for (int i=0;i<count;i++) a[i]=swap32(a[i]); }
+    else a=NULL; return a; }
+template<> inline int32* Stream::read<int32>(int32*& a, int count) {
+    if (count) { a = new int32[count]; raw(a, count*4);
+        for (int i=0;i<count;i++) a[i]=(int32)swap32((uint32)a[i]); }
+    else a=NULL; return a; }
+#endif
 
 #ifdef OS_FILEIO_CACHE
 void osDataWrite(Stream *stream, const char *dir) {

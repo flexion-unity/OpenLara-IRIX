@@ -1649,7 +1649,11 @@ namespace TR {
         uint16       index;
         uint16       clut;
         uint16       tile;
+#ifdef PLATFORM_BIG_ENDIAN
+        uint32       animated:1, attribute:15;
+#else
         uint32       attribute:15, animated:1;    // 0 - opaque, 1 - transparent, 2 - blend additive, animated, triangle
+#endif
         short2       texCoord[4];
         short2       texCoordAtlas[4];
         int16        l, t, r, b;
@@ -1696,12 +1700,20 @@ namespace TR {
 
     struct Face {
         union {
+#ifdef PLATFORM_BIG_ENDIAN
+            struct { uint16 doubleSided:1, texture:15; };
+#else
             struct { uint16 texture:15, doubleSided:1; };
+#endif
             uint16 value;
         } flags;
 
         union {
+#ifdef PLATFORM_BIG_ENDIAN
+            struct { uint16 shininess:6, env:1, additive:1; };
+#else
             struct { uint16 additive:1, env:1, shininess:6; };
+#endif
             uint16 value;
         } effects;
 
@@ -1822,7 +1834,11 @@ namespace TR {
         int16   alternateRoom;
         union {
             struct {
+#ifdef PLATFORM_BIG_ENDIAN
+                uint16 visible:1, unused:9, wind:1, :1, sky:1, :2, water:1;
+#else
                 uint16 water:1, :2, sky:1, :1, wind:1, unused:9, visible:1;
+#endif
             };
             uint16 value;
         } flags;
@@ -1989,28 +2005,49 @@ namespace TR {
     union FloorData {
         uint16 value;
         union Command {
-            struct {
-                uint16 func:5, tri:3, sub:7, end:1;
-            };
-            struct {
-                int16 :5, a:5, b:5, :1;
-            } triangle;
+#ifdef PLATFORM_BIG_ENDIAN
+            struct { uint16 end:1, sub:7, tri:3, func:5; };
+            struct { int16 :1, b:5, a:5, :5; } triangle;
+#else
+            struct { uint16 func:5, tri:3, sub:7, end:1; };
+            struct { int16 :5, a:5, b:5, :1; } triangle;
+#endif
         } cmd;
         struct {
+#ifdef PLATFORM_BIG_ENDIAN
+            int16 slantZ:8, slantX:8;
+#else
             int16 slantX:8, slantZ:8;
+#endif
         };
         struct {
+#ifdef PLATFORM_BIG_ENDIAN
+            uint16 d:4, c:4, b:4, a:4;
+#else
             uint16 a:4, b:4, c:4, d:4;
+#endif
         };
         struct TriggerInfo {
+#ifdef PLATFORM_BIG_ENDIAN
+            uint16  :2, mask:5, once:1, timer:8;
+#else
             uint16  timer:8, once:1, mask:5, :2;
+#endif
         } triggerInfo;
         union TriggerCommand {
             struct {
+#ifdef PLATFORM_BIG_ENDIAN
+                uint16 end:1, action:5, args:10;
+#else
                 uint16 args:10, action:5, end:1;
+#endif
             };
             struct {
+#ifdef PLATFORM_BIG_ENDIAN
+                uint16 :2, speed:5, once:1, timer:8;
+#else
                 uint16 timer:8, once:1, speed:5, :2;
+#endif
             };
         } triggerCmd;
 
@@ -2041,7 +2078,11 @@ namespace TR {
     };
 
     union Overlap {
+#ifdef PLATFORM_BIG_ENDIAN
+        struct { uint16 end:1, boxIndex:15; };
+#else
         struct { uint16 boxIndex:15, end:1; };
+#endif
         uint16 value;
     };
 
@@ -2095,8 +2136,12 @@ namespace TR {
             int16 OCB;
         };
         union Flags {
-            struct { 
+            struct {
+#ifdef PLATFORM_BIG_ENDIAN
+                uint16 rendered:1, reverse:1, active:5, once:1, invisible:1, :1, smooth:1, unused:3, state:2;
+#else
                 uint16 state:2, unused:3, smooth:1, :1, invisible:1, once:1, active:5, reverse:1, rendered:1;
+#endif
             };
             uint16 value;
         } flags;
@@ -2824,9 +2869,11 @@ namespace TR {
 
         int16   floor; // Height value in global units
         union {
-            struct {
-                uint16 index:14, block:1, blockable:1;    // Index into Overlaps[].
-            };
+#ifdef PLATFORM_BIG_ENDIAN
+            struct { uint16 blockable:1, block:1, index:14; };
+#else
+            struct { uint16 index:14, block:1, blockable:1; };
+#endif
             uint16 value;
         } overlap;
 
@@ -2864,7 +2911,11 @@ namespace TR {
         float  pitch;
         uint16 index;
         union {
+#ifdef PLATFORM_BIG_ENDIAN
+            struct { uint16 :1, gain:1, pitch:1, camera:1, unused:6, count:4, mode:2; };
+#else
             struct { uint16 mode:2, count:4, unused:6, camera:1, pitch:1, gain:1, :1; };
+#endif
             uint16 value;
         } flags;
     };
@@ -3374,6 +3425,11 @@ namespace TR {
 
             stream.read(tiles4, tilesCount = 13);
             stream.read(cluts,  clutsCount = 1024);
+#ifdef PLATFORM_BIG_ENDIAN
+            for (int i = 0; i < clutsCount; i++)
+                for (int j = 0; j < 16; j++)
+                    cluts[i].color[j].value = swap16(cluts[i].color[j].value);
+#endif
 
             readDataArrays(stream);
             readObjectTex(stream);
@@ -3458,6 +3514,11 @@ namespace TR {
             stream.read(palette32, 256);
             stream.read(tiles8, stream.read(tilesCount));
             stream.read(tiles16, tilesCount);
+#ifdef PLATFORM_BIG_ENDIAN
+            for (int t = 0; t < tilesCount; t++)
+                for (int p = 0; p < 256*256; p++)
+                    tiles16[t].color[p].value = swap16(tiles16[t].color[p].value);
+#endif
 
             readDataArrays(stream);
             readObjectTex(stream);
@@ -3521,6 +3582,11 @@ namespace TR {
             stream.read(palette32, 256);
             stream.read(tiles8, stream.read(tilesCount));
             stream.read(tiles16, tilesCount);
+#ifdef PLATFORM_BIG_ENDIAN
+            for (int t = 0; t < tilesCount; t++)
+                for (int p = 0; p < 256*256; p++)
+                    tiles16[t].color[p].value = swap16(tiles16[t].color[p].value);
+#endif
 
             readDataArrays(stream);
             readSpriteTex(stream);
@@ -3722,6 +3788,9 @@ namespace TR {
             }
 
             stream.read(floors, stream.read(floorsCount));
+#ifdef PLATFORM_BIG_ENDIAN
+            for (int i = 0; i < floorsCount; i++) floors[i].value = swap16(floors[i].value);
+#endif
 
             if (version == VER_TR3_PSX) {
                 // outside room offsets
@@ -3735,20 +3804,65 @@ namespace TR {
                 stream.seek(8 * size);
             }
 
-            stream.read(meshData,    stream.read(meshDataSize));
+            // meshData is re-parsed via an in-memory Stream inside initMesh.
+            // Do NOT use stream.read() here: on big-endian the uint16*
+            // specialisation would pre-swap every word, and then the inner
+            // stream reads would swap again (double-swap → wrong values).
+            // Use raw() to keep meshData in its original little-endian layout;
+            // the short2/short3/short4 Stream specialisations handle the swap
+            // when each field is read individually inside initMesh.
+            stream.read(meshDataSize);
+            if (meshDataSize) {
+                meshData = new uint16[meshDataSize];
+                stream.raw(meshData, meshDataSize * 2);
+            }
             stream.read(meshOffsets, stream.read(meshOffsetsCount));
 
             readAnims(stream);
 
-            stream.read(states,      stream.read(statesCount));
-            stream.read(ranges,      stream.read(rangesCount));
-            stream.read(commands,    stream.read(commandsCount));
-            stream.read(nodesData,   stream.read(nodesDataSize));
-            stream.read(frameData,   stream.read(frameDataSize));
+            stream.read(states,   stream.read(statesCount));
+            stream.read(ranges,   stream.read(rangesCount));
+            stream.read(commands, stream.read(commandsCount));
+            stream.read(nodesData,  stream.read(nodesDataSize));
+            stream.read(frameData,  stream.read(frameDataSize));
+
+#ifdef PLATFORM_BIG_ENDIAN
+            // AnimState and AnimRange are arrays of 2-byte fields — swap each word.
+            for (int i = 0; i < statesCount; i++) {
+                leSwapInPlace(states[i].state);
+                leSwapInPlace(states[i].rangesCount);
+                leSwapInPlace(states[i].rangesOffset);
+            }
+            for (int i = 0; i < rangesCount; i++) {
+                leSwapInPlace(ranges[i].low);
+                leSwapInPlace(ranges[i].high);
+                leSwapInPlace(ranges[i].nextAnimation);
+                leSwapInPlace(ranges[i].nextFrame);
+            }
+            // frameData is uint16* — already handled by the uint16* array specialisation.
+            // Swap the 6 int16 box fields + pos + angle data in each AnimFrame.
+            // AnimFrame layout: MinMax (6×int16) + short3 pos + uint16 angles[].
+            // The frameData array contains concatenated AnimFrame data; we
+            // byte-swap the entire uint16[] view which was already done by the
+            // uint16* array specialisation above.  No extra work needed here.
+#endif
 
             readModels(stream);
 
             stream.read(staticMeshes, stream.read(staticMeshesCount));
+#ifdef PLATFORM_BIG_ENDIAN
+            for (int i = 0; i < staticMeshesCount; i++) {
+                leSwapInPlace(staticMeshes[i].id);
+                leSwapInPlace(staticMeshes[i].mesh);
+                leSwapInPlace(staticMeshes[i].vbox.minX); leSwapInPlace(staticMeshes[i].vbox.maxX);
+                leSwapInPlace(staticMeshes[i].vbox.minY); leSwapInPlace(staticMeshes[i].vbox.maxY);
+                leSwapInPlace(staticMeshes[i].vbox.minZ); leSwapInPlace(staticMeshes[i].vbox.maxZ);
+                leSwapInPlace(staticMeshes[i].cbox.minX); leSwapInPlace(staticMeshes[i].cbox.maxX);
+                leSwapInPlace(staticMeshes[i].cbox.minY); leSwapInPlace(staticMeshes[i].cbox.maxY);
+                leSwapInPlace(staticMeshes[i].cbox.minZ); leSwapInPlace(staticMeshes[i].cbox.maxZ);
+                leSwapInPlace(staticMeshes[i].flags);
+            }
+#endif
         }
 
         void readAnims(Stream &stream) {
@@ -3801,7 +3915,16 @@ namespace TR {
         }
 
         void readCameras(Stream &stream) {
-            stream.read(cameras, stream.read(camerasCount));
+            stream.read(camerasCount);
+            cameras = camerasCount ? new Camera[camerasCount] : NULL;
+            for (int i = 0; i < camerasCount; i++) {
+                Camera &c = cameras[i];
+                stream.read(c.x);
+                stream.read(c.y);
+                stream.read(c.z);
+                stream.read(c.room);
+                stream.read(c.flags.boxIndex);
+            }
         }
 
         void readFlybyCameras(Stream &stream) {
@@ -3809,7 +3932,16 @@ namespace TR {
         }
 
         void readSoundSources(Stream &stream) {
-            stream.read(soundSources, stream.read(soundSourcesCount));
+            stream.read(soundSourcesCount);
+            soundSources = soundSourcesCount ? new SoundSource[soundSourcesCount] : NULL;
+            for (int i = 0; i < soundSourcesCount; i++) {
+                SoundSource &s = soundSources[i];
+                stream.read(s.x);
+                stream.read(s.y);
+                stream.read(s.z);
+                stream.read(s.id);
+                stream.read(s.flags);
+            }
         }
 
         void readBoxes(Stream &stream) {
@@ -3837,7 +3969,10 @@ namespace TR {
         }
 
         void readOverlaps(Stream &stream) {
-            stream.read(overlaps, stream.read(overlapsCount));
+            stream.read(overlapsCount);
+            overlaps = overlapsCount ? new Overlap[overlapsCount] : NULL;
+            for (int i = 0; i < overlapsCount; i++)
+                stream.read(overlaps[i].value);
         }
 
         void readZones(Stream &stream) {
@@ -5112,8 +5247,11 @@ namespace TR {
         void readRoom(Stream &stream, int roomIndex) {
             Room &r = rooms[roomIndex];
             Room::Data &d = r.data;
-        // room info
-            stream.read(r.info);
+        // room info — read field-by-field (Room::Info is 4×int32, bulk read is not endian-safe)
+            stream.read(r.info.x);
+            stream.read(r.info.z);
+            stream.read(r.info.yBottom);
+            stream.read(r.info.yTop);
         // room data
             stream.read(d.size);
             int startOffset = stream.pos;
@@ -5394,6 +5532,12 @@ namespace TR {
                 d.sCount  = 0;
             } else {
                 stream.read(d.sprites, stream.read(d.sCount));
+#ifdef PLATFORM_BIG_ENDIAN
+                for (int i = 0; i < d.sCount; i++) {
+                    leSwapInPlace(d.sprites[i].vertexIndex);
+                    leSwapInPlace(d.sprites[i].texture);
+                }
+#endif
             }
 
             if (version == VER_TR3_PSX && partsCount != 0) {
@@ -5405,6 +5549,18 @@ namespace TR {
 
         // portals
             stream.read(r.portals, stream.read(r.portalsCount));
+#ifdef PLATFORM_BIG_ENDIAN
+            for (int i = 0; i < r.portalsCount; i++) {
+                Room::Portal &p = r.portals[i];
+                leSwapInPlace(p.roomIndex);
+                leSwapInPlace(p.normal.x); leSwapInPlace(p.normal.y); leSwapInPlace(p.normal.z);
+                for (int k = 0; k < 4; k++) {
+                    leSwapInPlace(p.vertices[k].x);
+                    leSwapInPlace(p.vertices[k].y);
+                    leSwapInPlace(p.vertices[k].z);
+                }
+            }
+#endif
 
             if (version == VER_TR2_PSX || version == VER_TR3_PSX) {
                 for (int i = 0; i < r.portalsCount; i++) {
@@ -6090,67 +6246,80 @@ namespace TR {
                 case VER_TR1_PC :
                 case VER_TR2_PC :
                 case VER_TR3_PC : {
-                    struct {
-                        uint16  attribute;
-                        uint16  tile:14, :2;
-                        uint8   xh0, x0, yh0, y0;
-                        uint8   xh1, x1, yh1, y1;
-                        uint8   xh2, x2, yh2, y2;
-                        uint8   xh3, x3, yh3, y3;
-                    } d;
-
-                    stream.raw(&d, sizeof(d));
-                    SET_PARAMS(t, d, 0);
+                    // Field-by-field read: endian-safe on all platforms.
+                    uint16 attr, tileWord;
+                    stream.read(attr);
+                    stream.read(tileWord);
+                    uint8 xh0, x0, yh0, y0, xh1, x1, yh1, y1;
+                    uint8 xh2, x2, yh2, y2, xh3, x3, yh3, y3;
+                    stream.read(xh0); stream.read(x0); stream.read(yh0); stream.read(y0);
+                    stream.read(xh1); stream.read(x1); stream.read(yh1); stream.read(y1);
+                    stream.read(xh2); stream.read(x2); stream.read(yh2); stream.read(y2);
+                    stream.read(xh3); stream.read(x3); stream.read(yh3); stream.read(y3);
+                    t.clut      = 0;
+                    t.tile      = tileWord & 0x3FFF;
+                    t.attribute = attr;
+                    t.animated  = false;
+                    t.texCoord[0] = t.texCoordAtlas[0] = short2(x0, y0);
+                    t.texCoord[1] = t.texCoordAtlas[1] = short2(x1, y1);
+                    t.texCoord[2] = t.texCoordAtlas[2] = short2(x2, y2);
+                    t.texCoord[3] = t.texCoordAtlas[3] = short2(x3, y3);
                     break;
                 }
                 case VER_TR4_PC :
                 case VER_TR5_PC : {
-                    struct {
-                        uint16  attribute;
-                        uint16  tile:14, :2;
-                        uint16  flags;
-                        uint8   xh0, x0, yh0, y0;
-                        uint8   xh1, x1, yh1, y1;
-                        uint8   xh2, x2, yh2, y2;
-                        uint8   xh3, x3, yh3, y3;
-                    } d;
-
-                    struct {
-                        uint32 U, V, W, H;
-                    } duv;
-
-                    stream.raw(&d,   sizeof(d));
-                    stream.raw(&duv, sizeof(duv));
-                    SET_PARAMS(t, d, 0);
+                    uint16 attr, tileWord, flags;
+                    stream.read(attr);
+                    stream.read(tileWord);
+                    stream.read(flags);
+                    uint8 xh0, x0, yh0, y0, xh1, x1, yh1, y1;
+                    uint8 xh2, x2, yh2, y2, xh3, x3, yh3, y3;
+                    stream.read(xh0); stream.read(x0); stream.read(yh0); stream.read(y0);
+                    stream.read(xh1); stream.read(x1); stream.read(yh1); stream.read(y1);
+                    stream.read(xh2); stream.read(x2); stream.read(yh2); stream.read(y2);
+                    stream.read(xh3); stream.read(x3); stream.read(yh3); stream.read(y3);
+                    uint32 U, V, W, H;
+                    stream.read(U); stream.read(V); stream.read(W); stream.read(H);
+                    (void)flags; (void)U; (void)V; (void)W; (void)H;
+                    t.clut      = 0;
+                    t.tile      = tileWord & 0x3FFF;
+                    t.attribute = attr;
+                    t.animated  = false;
+                    t.texCoord[0] = t.texCoordAtlas[0] = short2(x0, y0);
+                    t.texCoord[1] = t.texCoordAtlas[1] = short2(x1, y1);
+                    t.texCoord[2] = t.texCoordAtlas[2] = short2(x2, y2);
+                    t.texCoord[3] = t.texCoordAtlas[3] = short2(x3, y3);
                     break;
                 }
-                case VER_TR1_PSX : 
+                case VER_TR1_PSX :
                 case VER_TR2_PSX :
                 case VER_TR3_PSX : {
-                    struct {
-                        uint8   x0, y0;
-                        uint16  clut;
-                        uint8   x1, y1;
-                        uint16  tile:14, :2;
-                        uint8   x2, y2;
-                        uint16  unknown2;
-                        uint8   x3, y3;
-                        uint16  attribute; 
-                    } d;
-                    stream.raw(&d, sizeof(d));
+                    // Field-by-field: stream.raw() gave byte-swapped clut/tile on BE,
+                    // causing cluts[clut] OOB in fillObjectTexture (clutsCount=1024).
+                    uint8  x0, y0, x1, y1, x2, y2, x3, y3;
+                    uint16 clut_val, tile_word, unknown2, attr;
+                    stream.read(x0);  stream.read(y0);
+                    stream.read(clut_val);
+                    stream.read(x1);  stream.read(y1);
+                    stream.read(tile_word);
+                    stream.read(x2);  stream.read(y2);
+                    stream.read(unknown2); (void)unknown2;
+                    stream.read(x3);  stream.read(y3);
+                    stream.read(attr);
                     if (version == VER_TR3_PSX) {
-                        if (d.attribute == 0)
-                            d.attribute = 0;
-                        else if (d.attribute == 2)
-                            d.attribute = 2;
-                        else if (d.attribute == 0xFFFF)
-                            d.attribute = 1;
-                        else {
-                            //ASSERT(false);
-                            d.attribute = 0;
-                        }
+                        if (attr == 0xFFFF)
+                            attr = 1;
+                        else if (attr != 0 && attr != 2)
+                            attr = 0;
                     }
-                    SET_PARAMS(t, d, d.clut);
+                    t.clut      = clut_val;
+                    t.tile      = tile_word & 0x3FFF;
+                    t.attribute = attr;
+                    t.animated  = false;
+                    t.texCoord[0] = t.texCoordAtlas[0] = short2(x0, y0);
+                    t.texCoord[1] = t.texCoordAtlas[1] = short2(x1, y1);
+                    t.texCoord[2] = t.texCoordAtlas[2] = short2(x2, y2);
+                    t.texCoord[3] = t.texCoordAtlas[3] = short2(x3, y3);
                     break;
                 }
                 default : ASSERT(false);
@@ -6204,35 +6373,41 @@ namespace TR {
                 }
                 case VER_TR1_PC :
                 case VER_TR2_PC :
-                case VER_TR3_PC : 
+                case VER_TR3_PC :
                 case VER_TR4_PC :
                 case VER_TR5_PC : {
-                    struct {
-                        uint16  tile;
-                        uint8   u, v;
-                        uint16  w, h;
-                        int16   l, t, r, b;
-                    } d;
-                    stream.raw(&d, sizeof(d));
-                    SET_PARAMS(t, d, 0);
-                    t.texCoord[0] = t.texCoordAtlas[0] = short2( d.u,                       d.v                       );
-                    t.texCoord[1] = t.texCoordAtlas[1] = short2( (uint8)(d.u + (d.w >> 8)), (uint8)(d.v + (d.h >> 8)) );
+                    // Field-by-field read: endian-safe on all platforms.
+                    // stream.raw() was wrong on big-endian — tile/w/h/l/t/r/b are multi-byte.
+                    uint16 tile, w, h;
+                    uint8  u, v;
+                    int16  dl, dt, dr, db;
+                    stream.read(tile);
+                    stream.read(u); stream.read(v);
+                    stream.read(w); stream.read(h);
+                    stream.read(dl); stream.read(dt); stream.read(dr); stream.read(db);
+                    t.tile = tile;
+                    t.l = dl; t.t = dt; t.r = dr; t.b = db;
+                    t.texCoord[0] = t.texCoordAtlas[0] = short2( u,                  v                  );
+                    t.texCoord[1] = t.texCoordAtlas[1] = short2( (uint8)(u + (w>>8)), (uint8)(v + (h>>8)) );
                     break;
                 }
-                case VER_TR1_PSX : 
+                case VER_TR1_PSX :
                 case VER_TR2_PSX :
                 case VER_TR3_PSX : {
-                    struct {
-                        int16   l, t, r, b;
-                        uint16  clut;
-                        uint16  tile;
-                        uint8   u0, v0;
-                        uint8   u1, v1;
-                    } d;
-                    stream.raw(&d, sizeof(d));
-                    SET_PARAMS(t, d, d.clut);
-                    t.texCoord[0] = t.texCoordAtlas[0] = short2( d.u0, d.v0 );
-                    t.texCoord[1] = t.texCoordAtlas[1] = short2( d.u1, d.v1 );
+                    // Field-by-field: stream.raw() gave byte-swapped clut/tile on BE.
+                    int16  dl, dt, dr, db;
+                    uint16 clut_val, tile_val;
+                    uint8  u0, v0, u1, v1;
+                    stream.read(dl); stream.read(dt); stream.read(dr); stream.read(db);
+                    stream.read(clut_val);
+                    stream.read(tile_val);
+                    stream.read(u0); stream.read(v0);
+                    stream.read(u1); stream.read(v1);
+                    t.clut = clut_val;
+                    t.tile = tile_val;
+                    t.l = dl; t.t = dt; t.r = dr; t.b = db;
+                    t.texCoord[0] = t.texCoordAtlas[0] = short2(u0, v0);
+                    t.texCoord[1] = t.texCoordAtlas[1] = short2(u1, v1);
                     break;
                 }
                 default : ASSERT(false);
