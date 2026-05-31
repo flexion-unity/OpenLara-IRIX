@@ -153,10 +153,6 @@ struct Texture : GAPI::Texture {
         uint8 r, g, b;
     };
 
-    struct Color32 {
-        uint8 r, g, b, a;
-    };
-
     static void SaveBMP(const char *name, const char *data32, int width, int height) {
         struct BITMAPFILEHEADER {
             uint32  bfSize;
@@ -240,6 +236,11 @@ struct Texture : GAPI::Texture {
         } pcx;
 
         stream.raw(&pcx, sizeof(PCX));
+
+#ifdef PLATFORM_BIG_ENDIAN
+        pcx.width  = swap16(pcx.width);
+        pcx.height = swap16(pcx.height);
+#endif
 
         ASSERT(pcx.bpp == 8);
         ASSERT(pcx.compression == 1);
@@ -636,8 +637,16 @@ struct Texture : GAPI::Texture {
             uint16 *end = src + width * height;
 
             while (src < end) {
+                // PSX RAW pixels are LE 15-bit RGB; swap on BE before extracting
                 uint16 c = *src++;
-                *dst++ = ((c & 0x001F) << 3) | ((c & 0x03E0) << 6) | (((c & 0x7C00) << 9)) | 0xFF000000;
+#ifdef PLATFORM_BIG_ENDIAN
+                c = swap16(c);
+#endif
+                uint8 *p = (uint8*)dst++;
+                p[0] = (c & 0x001F) << 3;
+                p[1] = (c & 0x03E0) >> 2;
+                p[2] = (c & 0x7C00) >> 7;
+                p[3] = 255;
             }
         }
         
@@ -664,7 +673,11 @@ struct Texture : GAPI::Texture {
 
         while (src < end) {
             uint16 c = swap16(*src++);
-            *dst++ = ((c & 0x001F) << 3) | ((c & 0x03E0) << 6) | (((c & 0x7C00) << 9)) | 0xFF000000;
+            uint8 *p = (uint8*)dst++;
+            p[0] = (c & 0x001F) << 3;
+            p[1] = (c & 0x03E0) >> 2;
+            p[2] = (c & 0x7C00) >> 7;
+            p[3] = 255;
         }
 
         delete[] data;
@@ -709,15 +722,22 @@ struct Texture : GAPI::Texture {
 
             for (uint32 j = 0; j < dh; j++)
                 for (uint32 i = 0; i < dw; i++)
-                    *dst++ = (i < width && j < height) ? *src++ : 0xFF000000;
+                    if (i < width && j < height) {
+                        *dst++ = *src++;
+                    } else {
+                        uint8 *p = (uint8*)dst++;
+                        p[0] = p[1] = p[2] = 0; p[3] = 255; // black opaque
+                    }
 
             delete[] data;
             data = (uint8*)dataPOT;
         }
 
         if (border) {
-            for (uint32 y = 0; y < height; y++)
-                ((uint32*)data)[y * dw] = ((uint32*)data)[y * dw + dw - 1] = 0xFF000000;
+            for (uint32 y = 0; y < height; y++) {
+                { uint8 *p = (uint8*)&((uint32*)data)[y * dw];        p[0]=p[1]=p[2]=0; p[3]=255; }
+                { uint8 *p = (uint8*)&((uint32*)data)[y * dw + dw-1]; p[0]=p[1]=p[2]=0; p[3]=255; }
+            }
         }
 
         Texture *tex = new Texture(dw, dh, 1, FMT_RGBA, 0, data);

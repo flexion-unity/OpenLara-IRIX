@@ -411,6 +411,10 @@ struct Video {
             uint32 flags, size;
             memcpy(&flags, data + 0, 4);
             memcpy(&size,  data + 4, 4);
+#ifdef PLATFORM_BIG_ENDIAN
+            flags = swap32(flags);  // Escape 124 frame header is little-endian (x86 TR1 PC)
+            size  = swap32(size);
+#endif
             data += 8;
 
             curVideoPos += size;
@@ -825,7 +829,10 @@ struct Video {
             uint32 syncMagic[3];
             stream->raw(syncMagic, sizeof(syncMagic));
             stream->seek(-(int)sizeof(syncMagic));
-
+#ifdef PLATFORM_BIG_ENDIAN
+            // raw read gives BE byte order; swap to LE for the comparison
+            for (int i = 0; i < 3; i++) syncMagic[i] = swap32(syncMagic[i]);
+#endif
             hasSyncHeader = syncMagic[0] == 0xFFFFFF00 && syncMagic[1] == 0xFFFFFFFF && syncMagic[2] == 0x00FFFFFF;
             
             if (!hasSyncHeader)
@@ -896,7 +903,18 @@ struct Video {
 
                 Sector sector;
                 stream->raw(&sector, sizeof(Sector));
-
+#ifdef PLATFORM_BIG_ENDIAN
+                sector.magic      = swap32(sector.magic);
+                sector.chunkIndex = swap16(sector.chunkIndex);
+                sector.chunksCount= swap16(sector.chunksCount);
+                sector.frameIndex = swap32(sector.frameIndex);
+                sector.chunkSize  = swap32(sector.chunkSize);
+                sector.width      = swap16(sector.width);
+                sector.height     = swap16(sector.height);
+                sector.blocks     = swap16(sector.blocks);
+                sector.qscale     = swap16(sector.qscale);
+                sector.version    = swap16(sector.version);
+#endif
                 if (sector.magic == MAGIC_STR)
                 {
                     VideoChunk *chunk = videoChunks + (videoChunksCount % MAX_CHUNKS);

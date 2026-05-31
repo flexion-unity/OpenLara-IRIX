@@ -785,9 +785,8 @@ namespace Sound {
     };
 #else // stb_vorbis
     struct OGG : Decoder {
-        stb_vorbis       *ogg;
-        stb_vorbis_alloc alloc;
-        uint8            *data;
+        stb_vorbis *ogg;
+        uint8      *data;
 
         OGG(Stream *stream, int channels) : Decoder(stream, channels, 0) {
             char buf[255];
@@ -797,9 +796,10 @@ namespace Sound {
             data = new uint8[stream->size];
             stream->raw(data, stream->size);
 
-            alloc.alloc_buffer_length_in_bytes = 256 * 1024;
-            alloc.alloc_buffer = new char[alloc.alloc_buffer_length_in_bytes];
-            ogg = stb_vorbis_open_memory(data, stream->size, NULL, &alloc);
+            // Pass NULL alloc so stb_vorbis uses system malloc.
+            int stbv_err = 0;
+            ogg = stb_vorbis_open_memory(data, stream->size, &stbv_err, NULL);
+            if (!ogg) { LOG("! stb_vorbis open failed: error=%d file=%s\n", stbv_err, stream->name); }
             ASSERT(ogg);
             stb_vorbis_info info = stb_vorbis_get_info(ogg);
             this->channels = info.channels;
@@ -808,7 +808,6 @@ namespace Sound {
 
         virtual ~OGG() {
             stb_vorbis_close(ogg);
-            delete[] alloc.alloc_buffer;
             delete[] data;
         }
 

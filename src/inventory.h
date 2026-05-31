@@ -1747,7 +1747,6 @@ struct Inventory {
             m.identity();
             Core::setViewProj(m, m);
             Core::mModel.identity();
-            Core::mModel.scale(vec3(1.0f / 32767.0f));
         #endif
 
         short o_frame = 32767;

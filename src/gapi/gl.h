@@ -305,7 +305,7 @@
     #define glProgramBinary(...)
 #endif
 
-#if defined(_OS_WIN) || defined(_OS_LINUX) || defined(_OS_GCW0) || (defined(__SDL2__) && (defined(_GAPI_GLES2) || defined(_SDL2_OPENGL)))
+#if defined(_OS_WIN) || defined(_OS_LINUX) || defined(_OS_GCW0) || defined(_OS_IRIX) || (defined(__SDL2__) && (defined(_GAPI_GLES2) || defined(_SDL2_OPENGL)))
 
     void* GetProc(const char *name) {
         #ifdef _OS_WIN
@@ -863,7 +863,13 @@ namespace GAPI {
                 glTexParameteri(target, GL_TEXTURE_WRAP_R, (opt & OPT_REPEAT) ? GL_REPEAT : GL_CLAMP_TO_EDGE);
             }
 
-            glTexParameteri(target, GL_TEXTURE_MIN_FILTER, filter ? (mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR) : (mipmaps ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST));
+            
+            bool canMipmap = mipmaps && (glGenerateMipmap != NULL);
+#ifdef FFP
+            if (mipmaps && !glGenerateMipmap)
+                glTexParameteri(target, 0x8191 /*GL_GENERATE_MIPMAP*/, GL_TRUE);
+#endif
+            glTexParameteri(target, GL_TEXTURE_MIN_FILTER, filter ? (canMipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR) : (canMipmap ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST));
             glTexParameteri(target, GL_TEXTURE_MAG_FILTER, filter ? GL_LINEAR : GL_NEAREST);
 
             FormatDesc desc = getFormat();
@@ -1373,6 +1379,8 @@ namespace GAPI {
 
         glMatrixMode(GL_TEXTURE);
         glLoadIdentity();
+        // texCoordAtlas values are in 0–32767 range (level.h applies <<7 + 64
+        // half-texel centering transform regardless of SPLIT_BY_TILE).
         glScalef(1.0f / 32767.0f, 1.0f / 32767.0f, 1.0f / 32767.0f);
 
         glClearColor(0, 0, 0, 0);
@@ -1550,6 +1558,9 @@ namespace GAPI {
     }
 
     void bindTarget(Texture *target, int face) {
+#ifdef FFP
+        (void)target; (void)face; return;
+#endif
         if (!target) { // may be a null
             glBindFramebuffer(GL_FRAMEBUFFER, defaultFBO);
         } else {
@@ -1597,7 +1608,9 @@ namespace GAPI {
 
     void copyTarget(Texture *dst, int xOffset, int yOffset, int x, int y, int width, int height) {
         Core::active.textures[0] = NULL;
+#ifndef FFP
         glActiveTexture(GL_TEXTURE0);
+#endif
         glBindTexture(GL_TEXTURE_2D, dst->ID);
         glCopyTexSubImage2D(GL_TEXTURE_2D, 0, xOffset, yOffset, x, y, width, height);
         glBindTexture(GL_TEXTURE_2D, 0);

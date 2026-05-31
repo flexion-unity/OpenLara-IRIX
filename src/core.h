@@ -64,12 +64,18 @@
     #define INV_STEREO
 #elif __SDL2__
     #define _GAPI_GL   1
-    #ifdef SDL2_GLES
-        #define _GAPI_GLES 1
-        #define DYNGEOM_NO_VBO
+    #ifdef __sgi
+        // IRIX/SGI: OpenGL 1.x fixed-function only, no shaders.
+        #define _OS_IRIX     1
+        #define INV_VIBRATION
+    #else
+        #ifdef SDL2_GLES
+            #define _GAPI_GLES 1
+            #define DYNGEOM_NO_VBO
+        #endif
+        #define INV_STEREO
     #endif
     #define INV_QUALITY
-    #define INV_STEREO
 #elif __SDL3__
     #define _GAPI_SW    1
 #elif __RPI__
@@ -115,6 +121,12 @@
     #define INV_SINGLE_PLAYER
     #define INV_VIBRATION
     #define INV_GAMEPAD_ONLY
+#elif __sgi
+    #define _OS_IRIX  1
+    #define _GAPI_GL  1
+
+    #define INV_VIBRATION
+    #define INV_QUALITY
 #elif __linux__
     #define _OS_LINUX 1
     #define _GAPI_GL  1
@@ -228,7 +240,7 @@
     #include "libs/tinf/tinf.h"
 #endif
 
-#if defined(_GAPI_SW) || defined(_GAPI_GU)
+#if defined(_GAPI_SW) || defined(_GAPI_GU) || defined(_OS_IRIX)
     #define FFP
 #endif
 
