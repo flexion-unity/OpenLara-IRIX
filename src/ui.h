@@ -47,7 +47,7 @@ namespace UI {
 
     int advGlyphsStart;
 
-    #define RU_MAP              "ÁÃÄÆÇÈËÏÓÔÖ×ØÙÚÛÜÝÞßáâãäæçêëìíïòôö÷øùúûüýþÿ" "i~\"^"
+    #define RU_MAP              "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½" "i~\"^"
     #define RU_GLYPH_COUNT      (COUNT(RU_MAP) - 1)
     #define RU_GLYPH_START      102
     #define RU_GLYPH_UPPERCASE  20
@@ -63,9 +63,9 @@ namespace UI {
         5, 5, 5, 11, 9, 7, 8, 6, 0, 7, 7, 3, 8, 8, 13, 7, 9, 4, 12, 12, 
         7, 5, 7, 7, 7, 7, 7, 7, 7, 7, 16, 14, 14, 14, 16, 16, 16, 16, 16, 12, 14, 8, 8, 8, 8, 8, 8, 8,
     // cyrillic
-        11, 11, 11, 13, 10, 13, 11, 11, 12, 12, 11,  9, 13, 13, 10, 13, // ÁÃÄÆÇÈËÏÓÔÖ×ØÙÚÛ
-         9, 11, 12, 11, 10,  9,  8, 10, 11,  9, 10, 10, 11,  9, 10, 12, // ÜÝÞßáâãäæçêëìíïò
-        10, 10,  9, 11, 12,  9, 11,  8,  9, 13,  9,                     // ôö÷øùúûüýþÿ
+        11, 11, 11, 13, 10, 13, 11, 11, 12, 12, 11,  9, 13, 13, 10, 13, // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+         9, 11, 12, 11, 10,  9,  8, 10, 11,  9, 10, 10, 11,  9, 10, 12, // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        10, 10,  9, 11, 12,  9, 11,  8,  9, 13,  9,                     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     // additional
         5, 10, 10, 10 // i~"^
     }; 
@@ -84,7 +84,7 @@ namespace UI {
 
     inline int charRemap(char c) {
         if (isCyrillic(c)) {
-            return char_map[RU_GLYPH_START + (c - 'À')];
+            return char_map[RU_GLYPH_START + (c - 'ï¿½')];
         }
 
         if (c < 11)
@@ -120,10 +120,10 @@ namespace UI {
             int o = 0;
             char c = RU_MAP[i];
 
-            if (c == 'á' || c == 'ä' || c == '~' || c == '\"') h = 14;
+            if (c == 'ï¿½' || c == 'ï¿½' || c == '~' || c == '\"') h = 14;
             if (c == '^') h = 16;
-            if (c == 'Ö' || c == 'Ù' || c == 'ö' || c == 'ù') { o = 1; h++; }
-            if (c == 'ô') { o = 2; h += 2; }
+            if (c == 'ï¿½' || c == 'ï¿½' || c == 'ï¿½' || c == 'ï¿½') { o = 1; h++; }
+            if (c == 'ï¿½') { o = 2; h += 2; }
 
             *glyphSprite++ = TR::TextureInfo(TR::TEX_TYPE_SPRITE, 0, -h + o, w, o, (i % 16) * 16, (i / 16) * 16 + (16 - h), w, h);
         }
@@ -779,9 +779,10 @@ namespace UI {
     }
 
     void setupInventoryShading(vec3 offset) {
-        Core::mView.identity();
-        Core::mProj = GAPI::perspective(1.0f, 1.0f, 1.0f, 2.0f, 0.0f);
-        Core::mLightProj = Core::mProj * Core::mView;
+        // mLightProj = perspective * identity = perspective (view is identity for light space)
+        // Do NOT overwrite Core::mView/mProj: FFP rendering (IRIX) reads Core::mView directly
+        // in DIP to build the modelview matrix, so clobbering it puts the camera at the origin.
+        Core::mLightProj = GAPI::perspective(1.0f, 1.0f, 1.0f, 2.0f, 0.0f);
 
         game->setShader(Core::passCompose, Shader::ENTITY, false, false);
         Core::setMaterial(1.0f, 0.0f, 0.0f, 1.0f);

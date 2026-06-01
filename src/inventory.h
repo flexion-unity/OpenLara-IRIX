@@ -1951,11 +1951,6 @@ struct Inventory {
             Core::mProj = GAPI::perspective(INV_FOV, aspect, INV_ZNEAR, INV_ZFAR, eyeSep);
         }
 
-        #ifdef _OS_IRIX
-        // 3D objects upside down on IRIX
-        Core::mProj.e11 = -Core::mProj.e11;
-        #endif
-
         Core::mView   = Core::mViewInv.inverseOrtho();
         Core::viewPos = Core::mViewInv.getPos();
 
