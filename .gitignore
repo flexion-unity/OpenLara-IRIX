@@ -1,0 +1,3 @@
+src/platform/irix/openlara
+*.o
+core
