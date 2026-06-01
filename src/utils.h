@@ -1540,7 +1540,11 @@ union ColorCLUT { // RGBA5551
 };
 
 struct ColorIndex4 {
+#ifdef PLATFORM_BIG_ENDIAN
+    uint8 b:4, a:4;
+#else
     uint8 a:4, b:4;
+#endif
 };
 
 struct Tile4 {

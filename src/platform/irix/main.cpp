@@ -352,7 +352,7 @@ void inputUpdate() {
 
 // Entry point
 static void print_help(int argc, char **argv) {
-    printf("%s [OPTION]\nOpenLara — IRIX/SGI port\n",
+    printf("%s [OPTION]\nOpenLara\n",
            argc ? argv[0] : "openlara");
     puts("-d [DIR]   directory where data files are");
     puts("-l [FILE]  load a specific level file");

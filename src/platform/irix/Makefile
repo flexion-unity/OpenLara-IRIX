@@ -1,4 +1,4 @@
-# OpenLara — IRIX/SGI Makefile
+# OpenLara IRIX/SGI Makefile (use gcc)
 
 TARGET  := openlara
 PREFIX  ?= /usr/local
@@ -28,7 +28,7 @@ CFLAGS   := $(COMMON_FLAGS)
 CXXSRCS := main.cpp \
            ../../libs/minimp3/minimp3.cpp
 
-# C sources (compiled as plain C — no C++ flags)
+# C sources
 CSRCS   := ../../libs/stb_vorbis/stb_vorbis.c \
            ../../libs/tinf/tinflate.c
 
