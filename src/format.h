@@ -1627,6 +1627,22 @@ namespace TR {
         }
     };
 
+} // namespace TR
+
+#ifdef PLATFORM_BIG_ENDIAN
+// TR::fixed is Q16.16 stored in LE files as [L_lo, L_hi, H_lo, H_hi].
+// The generic Stream::read uses raw() with no swap; on big-endian each 16-bit
+// half must be swapped individually so H and L are correctly interpreted.
+template<> inline TR::fixed& Stream::read<TR::fixed>(TR::fixed &x) {
+    raw(&x, 4);
+    x.L = swap16(x.L);
+    x.H = (int16)swap16((uint16)x.H);
+    return x;
+}
+#endif
+
+namespace TR {
+
     struct angle {
         uint16 value;
 
