@@ -2691,6 +2691,11 @@ struct Level : IGame {
                 clearFlags |= RT_CLEAR_COLOR | RT_CLEAR_DEPTH;
             #endif
 
+        #ifdef FFP
+            Core::setClearColor(camera->isUnderwater() ?
+                vec4(0.12f, 0.18f, 0.18f, 1.0f) :
+                vec4(0.0f, 0.0f, 0.0f, 1.0f));
+        #endif
             Core::setTarget(screen, NULL, clearFlags); // render to screen texture or back buffer
             Core::validateRenderState();
             setupBinding();

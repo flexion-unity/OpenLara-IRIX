@@ -937,6 +937,46 @@ struct WaterCache {
     void compose() {
         if (!visible) return;
         PROFILE_MARKER("WATER_COMPOSE");
+    #ifdef FFP
+        for (int i = 0; i < count; i++) {
+            Item &item = items[i];
+            if (!item.visible) continue;
+
+            glMatrixMode(GL_MODELVIEW);
+            glLoadMatrixf((const GLfloat*)&Core::mView);
+
+            glDisable(GL_TEXTURE_2D);
+            glDisable(GL_LIGHTING);
+            glDisable(GL_COLOR_MATERIAL);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glDepthMask(GL_FALSE);
+            glDisable(GL_CULL_FACE);
+
+            float shimmer = 0.05f * sinf(Core::params.x * 2.5f);
+            glColor4f(0.25f, 0.55f, 0.75f, 0.38f + shimmer);
+
+            float x0 = item.pos.x - item.size.x;
+            float x1 = item.pos.x + item.size.x;
+            float y  = item.pos.y;
+            float z0 = item.pos.z - item.size.z;
+            float z1 = item.pos.z + item.size.z;
+
+            glBegin(GL_QUADS);
+                glVertex3f(x0, y, z0);
+                glVertex3f(x1, y, z0);
+                glVertex3f(x1, y, z1);
+                glVertex3f(x0, y, z1);
+            glEnd();
+
+            glDepthMask(GL_TRUE);
+            glDisable(GL_BLEND);
+            glEnable(GL_CULL_FACE);
+            glEnable(GL_TEXTURE_2D);
+            glEnable(GL_LIGHTING);
+        }
+        dropCount = 0;
+    #else
         for (int i = 0; i < count; i++) {
             Item &item = items[i];
             if (!item.visible) continue;
@@ -972,6 +1012,7 @@ struct WaterCache {
             Core::setBlendMode(bmNone);
         }
         dropCount = 0;
+    #endif
     }
 
     void blitTexture(Texture *tex, bool flip = false) {

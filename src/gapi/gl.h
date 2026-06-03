@@ -1758,7 +1758,17 @@ namespace GAPI {
     }
 
     void setFog(const vec4 &params) {
-        // FFP TODO
+    #ifdef FFP
+        if (params.w == 0.0f) {
+            glDisable(GL_FOG);
+            return;
+        }
+        glEnable(GL_FOG);
+        glFogi(GL_FOG_MODE, GL_EXP);
+        vec4 fogColor(params.x, params.y, params.z, 1.0f);
+        glFogfv(GL_FOG_COLOR, (GLfloat*)&fogColor);
+        glFogf(GL_FOG_DENSITY, params.w);
+    #endif
     }
 
     void DIP(Mesh *mesh, const MeshRange &range) {
