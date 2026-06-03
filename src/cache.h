@@ -954,7 +954,7 @@ struct WaterCache {
             glDisable(GL_CULL_FACE);
 
             float shimmer = 0.05f * sinf(Core::params.x * 2.5f);
-            glColor4f(0.25f, 0.55f, 0.75f, 0.38f + shimmer);
+            glColor4f(0.05f, 0.20f, 0.65f, 0.50f + shimmer);
 
             float x0 = item.pos.x - item.size.x;
             float x1 = item.pos.x + item.size.x;

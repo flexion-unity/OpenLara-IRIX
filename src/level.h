@@ -569,11 +569,19 @@ struct Level : IGame {
         
         setShader(Core::pass, type, (Core::pass == Core::passAmbient) ? false : room.flags.water, alphaTest);
 
+    #ifdef FFP
+        if (room.flags.water || camera->isUnderwater()) {
+            Core::setFog(underwaterFogParams);
+        } else {
+            Core::setFog(levelFogParams);
+        }
+    #else
         if (room.flags.water) {
             Core::setFog(underwaterFogParams);
         } else {
             Core::setFog(levelFogParams);
         }
+    #endif
 
         #ifdef _GAPI_SW
             GAPI::setPalette(room.flags.water ? GAPI::swPaletteWater : GAPI::swPaletteColor);
@@ -2693,7 +2701,7 @@ struct Level : IGame {
 
         #ifdef FFP
             Core::setClearColor(camera->isUnderwater() ?
-                vec4(0.12f, 0.18f, 0.18f, 1.0f) :
+                vec4(0.05f, 0.40f, 0.43f, 1.0f) :
                 vec4(0.0f, 0.0f, 0.0f, 1.0f));
         #endif
             Core::setTarget(screen, NULL, clearFlags); // render to screen texture or back buffer

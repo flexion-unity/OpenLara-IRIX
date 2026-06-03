@@ -1765,7 +1765,11 @@ namespace GAPI {
         }
         glEnable(GL_FOG);
         glFogi(GL_FOG_MODE, GL_EXP);
-        vec4 fogColor(params.x, params.y, params.z, 1.0f);
+        // Override colour for underwater fog; level fogs keep their original colour.
+        const float WATER_FOG_THRESHOLD = 1.0f / (12 * 1024);
+        vec4 fogColor = (params.w > WATER_FOG_THRESHOLD)
+            ? vec4(0.05f, 0.40f, 0.43f, 1.0f)
+            : vec4(params.x, params.y, params.z, 1.0f);
         glFogfv(GL_FOG_COLOR, (GLfloat*)&fogColor);
         glFogf(GL_FOG_DENSITY, params.w);
     #endif
