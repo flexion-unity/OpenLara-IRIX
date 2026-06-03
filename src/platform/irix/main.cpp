@@ -352,10 +352,10 @@ void inputUpdate() {
 
 // Entry point
 static void print_help(int argc, char **argv) {
-    printf("%s [OPTION]\nOpenLara\n",
+    printf("%s [OPTION]\nOpenLara for IRIX (PSX Game Data)\n",
            argc ? argv[0] : "openlara");
-    puts("-d [DIR]   directory where data files are");
-    puts("-l [FILE]  load a specific level file");
+    puts("-d [DIR]   directory where PSX data files are");
+    puts("-l [FILE]  load a specific level file (e.g. -l PSXDATA/LEVEL1.PSX)");
     puts("-f         start in fullscreen mode");
     puts("-h         print this help");
 }
